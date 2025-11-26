@@ -9,6 +9,8 @@ from rich.table import Table
 
 CACHE_DIR = "cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "games.json")
+TAGS_FILE = os.path.join(CACHE_DIR, "tags.json")
+
 
 def ensure_cache():
     """Create cache directory if it doesn't exist"""
@@ -238,19 +240,85 @@ def load_cache():
     return cache_data
 
 
+def load_tags():
+    """Load tags from file"""
+    if not os.path.exists(TAGS_FILE):
+
+        return {}
+
+    try:
+
+        with open(TAGS_FILE) as f:
+
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+
+        return {}
+
+def save_tags(tags):
+    """Save tags to file"""
+    ensure_cache()
+
+    try:
+
+        with open(TAGS_FILE, 'w') as f:
+
+            json.dump(tags, f, indent=2)
+
+    except OSError as e:
+
+        console = Console()
+        console.print(f"Error saving tags: {e}", style="red")
+
+        
+def find_game_by_name(games, search_term):
+    """Find game by partial name match"""
+    search_lower = search_term.lower()
+
+    for game in games:
+
+        if game['name'].lower() == search_lower:
+
+            return game
+
+    matches = [g for g in games if search_lower in g['name'].lower()]
+
+    if len(matches) == 1:
+
+        return matches[0]
+
+    elif len(matches) > 1:
+
+        return matches
+    
+    return None
+
 def display_games(games, title="Library", last_updated=None):
     """Display the user's game library"""
     console = Console()
+    tags = load_tags()
+
 
     table = Table(title=title)
     table.add_column("Game", justify="left", style="green", no_wrap=False)
     table.add_column("Playtime", justify="right", style="cyan")
 
+    if tags:
+        
+        table.add_column("Tags", justify="left", style="yellow")
+
     # checks hours played and displays it
     for game in games:
 
         hours = game["playtime_forever"] / 60
-        table.add_row(game["name"], f"{hours:.2f} hours")
+        appid = str(game["appid"])
+        game_tags = tags.get(appid, [])
+
+        if tags:
+
+            table.add_row(game["name"], f"{hours:.2f} hours", ", ".join(game_tags))
+        else:
+            table.add_row(game["name"], f"{hours:.2f} hours")
 
     console.print(table)
     console.print(f"\nTotal games: {len(games)}", style="dim")
@@ -260,6 +328,49 @@ def display_games(games, title="Library", last_updated=None):
 
         dt = datetime.fromisoformat(last_updated)
         console.print(f"Last synced: {dt.strftime('%Y-%m-%d %H:%M:%S')}", style="dim")
+
+
+def display_all_tags(games):
+    """Display all tags and their game counts"""
+    console = Console()
+    tags = load_tags()
+
+    if not tags:
+
+        console.print("No tags found. Use --tag to add tags to games", style="yellow")
+        return
+    
+    tag_games = {}
+    games_by_id = {str(g['appid']): g['name'] for g in games}
+
+    for appid, game_tags in tags.items():
+
+        for tag in game_tags:
+
+            if tag not in tag_games:
+
+                tag_games[tag] = []
+
+            game_name = games_by_id.get(appid, f"Unknown ({appid})")
+            tag_games[tag].append(game_name)
+
+    table = Table(title="Tags")
+    table.add_column("Tag", style="yellow")
+    table.add_column("Count", justify='right', style='cyan')
+    table.add_column("Games", style='green')
+
+    for tag in sorted(tag_games.keys()):
+
+        game_list = tag_games[tag]
+        preview = ", ".join(game_list[:3])
+
+        if len(game_list) > 3:
+
+            preview += f" (+{len(game_list) - 3} more)"
+
+        table.add_row(tag, str(len(game_list)), preview)
+    
+    console.print(table)
 
 
 def display_stats(games):
@@ -376,7 +487,8 @@ def main():
     parser.add_argument('--notplayed', action='store_true', help='Display games that have not been played')
     parser.add_argument('--under', type=float, help="Display games that have less than X hours played")
     parser.add_argument('--over', type=float, help="Display games hat have more than X hours played")
-    parser.add_argument('--between', nargs=2, type=float, metavar=('MIN', 'MAX'), help="Display games that have between MIN and MAX hours played")
+    parser.add_argument('--between', nargs=2, type=float, metavar=('MIN', 'MAX'),
+                        help="Display games that have between MIN and MAX hours played")
     parser.add_argument('--started', action='store_true', help="Display games started but barely played (0-2hrs)")
     parser.add_argument('--sync', action='store_true', help="Sync the game library from Steam")
     parser.add_argument('--sortby', choices=['name', 'playtime', 'playtime-asc'],
@@ -384,6 +496,11 @@ def main():
     parser.add_argument('--stats', action='store_true', help='Display library statistics')
     parser.add_argument('--setup', action='store_true', help='Run setup wizard to configure credentials')
     parser.add_argument('--search', type=str, help='Search for a game by name')
+    parser.add_argument('--tag', nargs=2, metavar=('GAME', 'TAG'), help='Add a tag to a game')
+    parser.add_argument('--untag', nargs=2, metavar=('GAME', 'TAG'), help='Remove a tag from a game')
+    parser.add_argument('--tags', action='store_true', help='Display all tags')
+    parser.add_argument('--filter-tag', type=str, metavar='TAG', help='Filter games by tag')
+
     args = parser.parse_args()
 
     config = load_config()
@@ -406,6 +523,100 @@ def main():
 
         return
 
+    # tag management
+    if args.tag or args.untag or args.tags:
+        
+        cache_data = load_cache()
+
+        if cache_data is None:
+           
+            console = Console()
+            console.print("No cache found. Use --sync first", style='red')
+            return
+
+        games = cache_data["games"]
+        
+        if args.tags:
+
+            display_all_tags(games)
+            return
+        
+        if args.tag:
+
+            game_name, tag_name = args.tag
+            result = find_game_by_name(games, game_name)
+            console = Console()
+
+            if result is None:
+
+                console.print(f"No game found matching '{game_name}'", style="red")
+                return
+
+            elif isinstance(result, list):
+
+                console.print(f"Multiple games match '{game_name}':", style='yellow')
+
+                for g in result[:10]:
+                    console.print(f" - {g['name']}", style='dim')
+                return
+
+            tags = load_tags()
+            appid = str(result['appid'])
+
+            if appid not in tags:
+                tags[appid] = []
+            if tag_name not in tags[appid]:
+
+                tags[appid].append(tag_name)
+                save_tags(tags)
+                console.print(f"Added tag '{tag_name}' to {result['name']}", style='green')
+            else:
+
+                console.print(f"{result['name']} already has tag '{tag_name}'", style="yellow")
+
+            return
+
+        if args.untag:
+            
+            game_name, tag_name = args.untag
+            result = find_game_by_name(games, game_name)
+            console = Console()
+
+            if result is None:
+
+                console.print(f"No game found matching '{game_name}'", style="red")
+                return
+
+            elif isinstance(result, list):
+
+                console.print(f"Multiple games match '{game_name}':", style="yellow")
+
+                for g in result[:10]:
+
+                    console.print(f" - {g['name']}", style="dim")
+
+                return
+
+            tags = load_tags()
+            appid = str(result['appid'])
+
+            if appid in tags and tag_name in tags[appid]:
+
+                tags[appid].remove(tag_name)
+
+                if not tags[appid]:
+
+                    del tags[appid]
+
+                save_tags(tags)
+
+                console.print(f"Removed tag '{tag_name}' from {result['name']}", style="green")
+
+            else:
+
+                console.print(f"{result['name']} doesn't have tag '{tag_name}'", style="yellow")
+
+            return
 
     # syncing, checks if user has cache already or not
     if args.sync:
@@ -438,12 +649,17 @@ def main():
         display_stats(games)
         return
     
-
+    
     # filtering
     if args.search:
         search_term = args.search.lower()
         games = [g for g in games if search_term in g['name'].lower()]
+    
+    if args.filter_tag:
 
+        tags = load_tags()
+        games = [g for g in games if args.filter_tag in tags.get(str(g['appid']), [])]
+        
     if args.notplayed:
 
         games = [g for g in games if g['playtime_forever'] == 0]
@@ -467,6 +683,7 @@ def main():
 
 
     # sorting
+
     if args.sortby == 'name':
 
         games = sorted(games, key=lambda g: g['name'].lower())
