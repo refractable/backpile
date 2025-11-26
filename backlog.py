@@ -315,22 +315,56 @@ def display_stats(games):
     console.print(table)
     
     # playtime distribution table for additional insight
-    dist_table = Table(title='Playtime Distribution', show_header=False)
-    dist_table.add_column("Bracket", style="cyan")
-    dist_table.add_column("Count", justify="right", style="green")
-    dist_table.add_column("Bar", style='yellow')
+    console.print()
+    console.print("[bold]Playtime Distribution[/bold]")
+    console.print()
+
+    bracket_data = []
 
     for label, condition in brackets:
 
         count = len([g for g in games if condition(g['playtime_forever'] / 60)])
-        percent = (count / total_games * 100) if total_games > 0 else 0
+        percent = (count / total_games * 100) if total_games else 0
+        bracket_data.append((label, count, percent))
 
-        bar_width = int(percent / 2.5)
-        bar = '█' * bar_width
-        dist_table.add_row(label, f"{count} ({percent:.2f}%)", bar)
+    max_height = 12
+    max_percent = max(b[2] for b in bracket_data) if bracket_data else 1
 
-    console.print()
-    console.print(dist_table)
+    for row in range(max_height, 0, -1):
+
+        line = "    "
+
+        for label, count, percent in bracket_data:
+
+            bar_height = int((percent / max_percent) * max_height) if max_percent > 0 else 0
+
+            if row <= bar_height:
+
+                line += " [yellow]██[/yellow]    "
+
+            else:
+
+                line += "       "
+
+        console.print(line)
+
+    console.print("  " + "───────" * len(bracket_data))
+
+    pct_line = " "
+
+    for label, count, percent in bracket_data:
+
+        pct_line += f" [green]{percent:4.0f}%[/green] "
+
+    console.print(pct_line)
+    short_labels = ["0 hrs", "<1 hr", "1-10", "10-50", "50-100", "100+"]
+    label_line = " "
+
+    for short in short_labels:
+
+        label_line += f" [cyan]{short:^5}[/cyan] "
+
+    console.print(label_line)
 
 
 def main():
