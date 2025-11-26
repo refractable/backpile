@@ -49,7 +49,7 @@ def setup_config():
     console.print("To use this tool, you'll need a Steam API key and your Steam ID.\n")
 
     console.print("[bold]Step 1: Steam API key[/bold]")
-    console.print("Get your key at: https:/steamcommunity.com/dev/apikey", style='dim')
+    console.print("Get your key at: https://steamcommunity.com/dev/apikey", style='dim')
     api_key = input("Enter your Steam API key: ").strip()
 
     if not api_key:
@@ -76,7 +76,7 @@ def setup_config():
 
         console.print("Warning: Could not validate credentials", style='yellow')
         console.print("This could mean invalid API key, private profile, or network issues.", style='dim')
-        confirm = input("Save anyway? (y/n): ".strip().lower())
+        confirm = input("Save anyway? (y/n): ").strip().lower()
 
         if confirm != 'y':
 
