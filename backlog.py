@@ -375,6 +375,9 @@ def main():
     parser = argparse.ArgumentParser(description="Steam game backlog tracker")
     parser.add_argument('--notplayed', action='store_true', help='Display games that have not been played')
     parser.add_argument('--under', type=float, help="Display games that have less than X hours played")
+    parser.add_argument('--over', type=float, help="Display games hat have more than X hours played")
+    parser.add_argument('--between', nargs=2, type=float, metavar=('MIN', 'MAX'), help="Display games that have between MIN and MAX hours played")
+    parser.add_argument('--started', action='store_true', help="Display games started but barely played (0-2hrs)")
     parser.add_argument('--sync', action='store_true', help="Sync the game library from Steam")
     parser.add_argument('--sortby', choices=['name', 'playtime', 'playtime-asc'],
                         help='Sort games by name or playtime')
@@ -429,23 +432,39 @@ def main():
         games = cache_data["games"]
         last_updated = cache_data["last_updated"]
 
+
     # statistics
     if args.stats:
         display_stats(games)
         return
+    
 
+    # filtering
     if args.search:
         search_term = args.search.lower()
         games = [g for g in games if search_term in g['name'].lower()]
 
-    # filtering
     if args.notplayed:
 
         games = [g for g in games if g['playtime_forever'] == 0]
+    
+    elif args.started:
+
+        games = [g for g in games if g['playtime_forever'] / 60 <= 2]
 
     elif args.under:
 
         games = [g for g in games if g['playtime_forever'] / 60 < args.under]
+    
+    elif args.over:
+
+        games = [g for g in games if g['playtime_forever'] / 60 > args.over]
+
+    elif args.between:
+
+        min_hrs, max_hrs = args.between
+        games = [g for g in games if min_hrs <= g['playtime_forever'] / 60 <= max_hrs]
+
 
     # sorting
     if args.sortby == 'name':
@@ -470,10 +489,20 @@ def main():
     if args.notplayed:
 
         title = "Not played games"
+    elif args.started:
+
+        title = "Started but barely played games (0-2hrs)"
 
     elif args.under:
 
         title = f"Games under {args.under} hours"
+
+    elif args.over:
+        title = f"Games over {args.over} hours"
+
+    elif args.between:
+
+        title = f"Games between {args.between[0]}-{args.between[1]} hours"
 
     else:
 

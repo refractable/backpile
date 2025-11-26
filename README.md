@@ -5,31 +5,27 @@ A command-line tool to track and manage your Steam game backlog.
 ## Features
 
 - Sync your Steam library with local caching
-- Filter games by playtime or unplayed status
+- Search for games by name
+- Filter games by playtime (unplayed, under/over X hours, between ranges)
 - Sort by name or playtime
-- View library statistics
+- View library statistics with playtime distribution
 
 ## Setup
 
 1. **Install dependencies:**
-```bash
+   ```bash
    pip install requests rich
-```
+   ```
 
-2. **Get a Steam API key:**
-   - Visit https://steamcommunity.com/dev/apikey
-   - Sign in and register (domain can be anything like "localhost")
+2. **Run the tool:**
+   ```bash
+   python backlog.py
+   ```
+   On first run, the setup wizard will guide you through configuration.
 
-3. **Find your Steam ID:**
-   - Use https://steamid.io/ to get your 64-bit Steam ID
-
-4. **Create config.json:**
-```json
-   {
-     "API_KEY": "your_steam_api_key_here",
-     "STEAM_ID": "your_steam_id_here"
-   }
-```
+   You'll need:
+   - A Steam API key from https://steamcommunity.com/dev/apikey
+   - Your 64-bit Steam ID from https://steamid.io
 
 ## Usage
 
@@ -43,14 +39,18 @@ python backlog.py --sync
 python backlog.py
 ```
 
-**Filter unplayed games:**
+**Search for games:**
 ```bash
-python backlog.py --notplayed
+python backlog.py --search "dark souls"
 ```
 
-**Filter games under X hours:**
+**Filter options:**
 ```bash
-python backlog.py --under 5
+python backlog.py --notplayed           # Never played
+python backlog.py --started             # Started but barely played (0-2 hrs)
+python backlog.py --under 5             # Under 5 hours
+python backlog.py --over 50             # Over 50 hours
+python backlog.py --between 10 50       # Between 10-50 hours
 ```
 
 **Sort options:**
@@ -65,9 +65,22 @@ python backlog.py --sortby playtime-asc
 python backlog.py --stats
 ```
 
-Note: The --stats option is not currently supported.
+**Reconfigure credentials:**
+```bash
+python backlog.py --setup
+```
 
-Note2: These filters are able to be used together, e.g. `--notplayed --under 5`.
+**Combine filters, search, and sorting:**
+```bash
+python backlog.py --notplayed --sortby name
+python backlog.py --search "souls" --sortby playtime
+python backlog.py --over 100 --sortby playtime
+python backlog.py --between 1 10 --search "rpg"
+```
+
+## Privacy Settings
+
+Your Steam profile and game details must be set to public for the library sync to work.
 
 ## Requirements
 
@@ -75,6 +88,6 @@ Note2: These filters are able to be used together, e.g. `--notplayed --under 5`.
 - requests
 - rich
 
-## Notes
-This is a work in progress project as this is a personal project. If you have any suggestions or feedback, please open an issue on GitHub.
-I have many more features planned, but I am currently focused on getting the core functionality working.
+## License
+
+MIT License
