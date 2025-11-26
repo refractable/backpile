@@ -96,11 +96,11 @@ def setup_config():
     except OSError as e:
         console.print(f"Error saving config: {e}", style='red')
         sys.exit(1)
-    
+
     return config
 
 def load_config():
-    
+
     console = Console()
 
     if not os.path.exists("config.json"):
@@ -163,7 +163,7 @@ def fetch_games(api_key, steam_id):
         console.print("Error: Could not connect to Steam API", style="red")
         console.print("Check your internet connection and try again", style="yellow")
 
-    except requests.exceptions.HTTPError as e:  
+    except requests.exceptions.HTTPError as e:
 
         status_code = e.response.status_code if e.response else 500
 
@@ -259,10 +259,11 @@ def display_games(games, title="Library", last_updated=None):
         dt = datetime.fromisoformat(last_updated)
         console.print(f"Last synced: {dt.strftime('%Y-%m-%d %H:%M:%S')}", style="dim")
 
+
 def display_stats(games):
     """Display stats about the user's game library"""
     console = Console()
- 
+
     # total games, total playtime, not played games
     total_games = len(games)
     total_minutes = sum(g['playtime_forever'] for g in games)
@@ -276,6 +277,16 @@ def display_stats(games):
     avg_hours = (sum(g['playtime_forever'] for g in played_games) / 60 / len(played_games)) if played_games else 0
 
     most_played = max(games, key=lambda g: g['playtime_forever']) if games else None
+    least_played = min(played_games, key=lambda g: g['playtime_forever']) if played_games else None
+
+    brackets = [
+        ("Never played", lambda h: h == 0),
+        ("Under 1 hour", lambda h: 0 < h < 1),
+        ("1-10 hours", lambda h: 1 <= h < 10),
+        ("10-50 hours", lambda h: 10 <= h < 50),
+        ("50-100 hours", lambda h: 50 <= h < 100),
+        ("100+ hours", lambda h: h >= 100),
+    ]
 
     # initialize table
     table = Table(title="Library Statistics", show_header=False)
@@ -288,13 +299,38 @@ def display_stats(games):
     table.add_row("Played Games", str(len(played_games)))
 
     if played_games:
+
         table.add_row("Average Playtime", f"{avg_hours:.2f} hours")
 
     if most_played:
-        most_played_hours = most_played['playtime_forever'] / 60
-        table.add_row("Most Played Game", f"{most_played['name']} ({most_played_hours:.2f} hours)")
 
+        most_played_hours = most_played['playtime_forever'] / 60
+        table.add_row("Most Played", f"{most_played['name']} ({most_played_hours:.2f} hrs)")
+
+    if least_played:
+
+        least_played_hours = least_played['playtime_forever'] / 60
+        table.add_row("Least Played", f"{least_played['name']} ({least_played_hours:.2f} hrs)")
+ 
     console.print(table)
+    
+    # playtime distribution table for additional insight
+    dist_table = Table(title='Playtime Distribution', show_header=False)
+    dist_table.add_column("Bracket", style="cyan")
+    dist_table.add_column("Count", justify="right", style="green")
+    dist_table.add_column("Bar", style='yellow')
+
+    for label, condition in brackets:
+
+        count = len([g for g in games if condition(g['playtime_forever'] / 60)])
+        percent = (count / total_games * 100) if total_games > 0 else 0
+
+        bar_width = int(percent / 2.5)
+        bar = '█' * bar_width
+        dist_table.add_row(label, f"{count} ({percent:.2f}%)", bar)
+
+    console.print()
+    console.print(dist_table)
 
 
 def main():
