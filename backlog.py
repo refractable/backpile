@@ -156,7 +156,7 @@ def load_cache():
 
 
 def display_games(games, title="Library", last_updated=None):
-
+    """Display the user's game library"""
     console = Console()
 
     table = Table(title=title)
@@ -176,21 +176,61 @@ def display_games(games, title="Library", last_updated=None):
         dt = datetime.fromisoformat(last_updated)
         console.print(f"Last synced: {dt.strftime('%Y-%m-%d %H:%M:%S')}", style="dim")
 
+def display_stats(games):
+    """Display stats about the user's game library"""
+    console = Console()
+ 
+    # total games, total playtime, not played games
+    total_games = len(games)
+    total_minutes = sum(g['playtime_forever'] for g in games)
+    total_hours = total_minutes / 60
+
+    not_played = [g for g in games if g['playtime_forever'] == 0]
+    not_played_count = len(not_played)
+    not_played_percent = (not_played_count / total_games * 100) if total_games > 0 else 0
+
+    played_games = [g for g in games if g['playtime_forever'] > 0]
+    avg_hours = (sum(g['playtime_forever'] for g in played_games) / 60 / len(played_games)) if played_games else 0
+
+    most_played = max(games, key=lambda g: g['playtime_forever']) if games else None
+
+    # initialize table
+    table = Table(title="Library Statistics", show_header=False)
+    table.add_column("Statistic", style="cyan")
+    table.add_column("Value", justify="right", style="green")
+
+    table.add_row("Total Games", str(total_games))
+    table.add_row("Total Playtime", f"{total_hours:.2f} hours")
+    table.add_row("Not Played Games", f"{not_played_count} ({not_played_percent:.2f}%)")
+    table.add_row("Played Games", str(len(played_games)))
+
+    if played_games:
+        table.add_row("Average Playtime", f"{avg_hours:.2f} hours")
+
+    if most_played:
+        most_played_hours = most_played['playtime_forever'] / 60
+        table.add_row("Most Played Game", f"{most_played['name']} ({most_played_hours:.2f} hours)")
+
+    console.print(table)
+
 
 def main():
 
+    # initializing parser
     parser = argparse.ArgumentParser(description="Steam game backlog tracker")
     parser.add_argument('--notplayed', action='store_true', help='Display games that have not been played')
     parser.add_argument('--under', type=float, help="Display games that have less than X hours played")
     parser.add_argument('--sync', action='store_true', help="Sync the game library from Steam")
     parser.add_argument('--sortby', choices=['name', 'playtime', 'playtime-asc'],
                         help='Sort games by name or playtime')
+    parser.add_argument('--stats', action='store_true', help='Display library statistics')
+
     args = parser.parse_args()
 
-    with open("config.json") as f:
+    config = load_config()
 
-        config = json.load(f)
-
+ 
+    # syncing, checks if user has cache already or not
     if args.sync:
 
         console = Console()
@@ -214,6 +254,11 @@ def main():
 
         games = cache_data["games"]
         last_updated = cache_data["last_updated"]
+
+    # statistics
+    if args.stats:
+        display_stats(games)
+        return
 
     # filtering
     if args.notplayed:
