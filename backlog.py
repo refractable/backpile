@@ -23,7 +23,7 @@ def ensure_cache():
         console.print(f"Error creating cache directory: {e}", style="red")
         sys.exit(1)
 
- 
+
 def validate_credentials(api_key, steam_id):
     """Test credentials with a request to API"""
     url = (
@@ -34,7 +34,7 @@ def validate_credentials(api_key, steam_id):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        return 'response' in data
+        return "response" in data
     except Exception:
         return False
 
@@ -46,52 +46,49 @@ def setup_config():
     console.print("\n[bold cyan]Steam Backlog Tracker Setup[/bold cyan]\n")
     console.print("To use this tool, you'll need a Steam API key and your Steam ID.\n")
     console.print("[bold]Step 1: Steam API key[/bold]")
-    console.print("Get your key at: https://steamcommunity.com/dev/apikey",
-                  style='dim')
+    console.print("Get your key at: https://steamcommunity.com/dev/apikey", style="dim")
 
     api_key = input("Enter your Steam API key: ").strip()
 
     if not api_key:
-        console.print("Error: API key cannot be empty", style='red')
+        console.print("Error: API key cannot be empty", style="red")
         sys.exit(1)
 
     console.print("\n[bold]Step 2: Steam ID[/bold]")
-    console.print("Find your 64-bit tem ID at: https://steamid.io",
-                  style='dim')
+    console.print("Find your 64-bit tem ID at: https://steamid.io", style="dim")
     steam_id = input("Enter your Steam ID: ").strip()
 
     if not steam_id:
-        console.print("Error: Steam ID cannot be empty", style='red')
+        console.print("Error: Steam ID cannot be empty", style="red")
         sys.exit(1)
 
-    console.print("\nValidating credentials..", style='dim')
+    console.print("\nValidating credentials..", style="dim")
 
     if validate_credentials(api_key, steam_id):
-        console.print("Credentials are valid. Saving config..", style='green')
+        console.print("Credentials are valid. Saving config..", style="green")
     else:
-        console.print("Warning: Could not validate credentials",
-                      style='yellow')
-        console.print("This could mean invalid API key, private profile, or network issues.",
-                      style='dim')
+        console.print("Warning: Could not validate credentials", style="yellow")
+        console.print(
+            "This could mean invalid API key, private profile, or network issues.",
+            style="dim",
+        )
         confirm = input("Save anyway? (y/n): ").strip().lower()
 
-        if confirm != 'y':
-            console.print("Setup cancelled. Exiting..", style='red')
+        if confirm != "y":
+            console.print("Setup cancelled. Exiting..", style="red")
             sys.exit(1)
 
-    config = {
-        "API_KEY": api_key,
-        "STEAM_ID": steam_id
-    }
+    config = {"API_KEY": api_key, "STEAM_ID": steam_id}
 
     try:
         with open("config.json", "w") as f:
             json.dump(config, f, indent=2)
-        console.print("\nConfig saved to config.json", style='green')
-        console.print("Run 'python backlog.py --sync' to fetch your game library\n",
-                      style='dim')
+        console.print("\nConfig saved to config.json", style="green")
+        console.print(
+            "Run 'python backlog.py --sync' to fetch your game library\n", style="dim"
+        )
     except OSError as e:
-        console.print(f"Error saving config: {e}", style='red')
+        console.print(f"Error saving config: {e}", style="red")
         sys.exit(1)
 
     return config
@@ -108,17 +105,13 @@ def load_config():
         with open("config.json") as f:
             config = json.load(f)
     except json.JSONDecodeError:
-        console.print("Error: config.json is corrupted or invalid",
-                      style='red')
-        console.print("Delete config.json and run again to start fresh",
-                      style='yellow')
+        console.print("Error: config.json is corrupted or invalid", style="red")
+        console.print("Delete config.json and run again to start fresh", style="yellow")
         sys.exit(1)
 
     if "API_KEY" not in config or "STEAM_ID" not in config:
-        console.print("Error: config.json is missing required keys",
-                      style='red')
-        console.print("Delete config.json and run again to start fresh",
-                      style='yellow')
+        console.print("Error: config.json is missing required keys", style="red")
+        console.print("Delete config.json and run again to start fresh", style="yellow")
         sys.exit(1)
 
     return config
@@ -139,33 +132,36 @@ def fetch_games(api_key, steam_id):
         response.raise_for_status()
         data = response.json()
 
-        if 'response' not in data or 'games' not in data['response']:
-            console.print("Error: Unexpected response format from Steam API",
-                          style="red")
+        if "response" not in data or "games" not in data["response"]:
+            console.print(
+                "Error: Unexpected response format from Steam API", style="red"
+            )
             sys.exit(0)
 
-        return data['response']['games']
+        return data["response"]["games"]
 
     # checks if there is a network error
     except requests.exceptions.Timeout:
         console.print("Error: Steam API request timed out", style="red")
-        console.print("Check your internet connection and try again",
-                      style="yellow")
+        console.print("Check your internet connection and try again", style="yellow")
         sys.exit(1)
     except requests.exceptions.ConnectionError:
         console.print("Error: Could not connect to Steam API", style="red")
-        console.print("Check your internet connection and try again",
-                      style="yellow")
+        console.print("Check your internet connection and try again", style="yellow")
     except requests.exceptions.HTTPError as e:
         status_code = e.response.status_code if e.response else 500
         if status_code == 401:
             console.print("Error: Invalid Steam API key", style="red")
         elif status_code == 403:
-            console.print("Error: Steam API request forbidden. Check your Steam profile privacy settings",
-                          style="red")
+            console.print(
+                "Error: Steam API request forbidden. Check your Steam profile privacy settings",
+                style="red",
+            )
         else:
-            console.print(f"Error: Steam API request failed with status code {status_code}",
-                          style="red")
+            console.print(
+                f"Error: Steam API request failed with status code {status_code}",
+                style="red",
+            )
 
         sys.exit(1)
     except json.JSONDecodeError:
@@ -177,13 +173,10 @@ def save_cache(games):
     """Save the user's game library to a cache file with timestamp"""
     ensure_cache()
 
-    cache_data = {
-        'last_updated': datetime.now().isoformat(),
-        'games': games
-    }
+    cache_data = {"last_updated": datetime.now().isoformat(), "games": games}
 
     try:
-        with open(CACHE_FILE, 'w') as f:
+        with open(CACHE_FILE, "w") as f:
             json.dump(cache_data, f, indent=2)
     except OSError as e:
         console = Console()
@@ -202,8 +195,9 @@ def load_cache():
         with open(CACHE_FILE) as f:
             cache_data = json.load(f)
     except json.JSONDecodeError:
-        console.print("Warning: Cache file is corrupted. Run --sync to rebuild",
-                      style="yellow")
+        console.print(
+            "Warning: Cache file is corrupted. Run --sync to rebuild", style="yellow"
+        )
         return None
     except OSError as e:
         console.print(f"Error reading cache file: {e}", style="red")
@@ -229,11 +223,12 @@ def save_tags(tags):
     ensure_cache()
 
     try:
-        with open(TAGS_FILE, 'w') as f:
+        with open(TAGS_FILE, "w") as f:
             json.dump(tags, f, indent=2)
     except OSError as e:
         console = Console()
         console.print(f"Error saving tags: {e}", style="red")
+
 
 def load_status():
     """Load manual status overrides from file"""
@@ -251,7 +246,7 @@ def save_status():
     ensure_cache()
 
     try:
-        with open(STATUS_FILE, 'w') as f:
+        with open(STATUS_FILE, "w") as f:
             json.dump(status, f, indent=2)
     except OSError as e:
         console = Console()
@@ -263,35 +258,36 @@ def get_game_status(game, manual_status=None):
     import time
 
     appid = str(game["appid"])
-    
+
     if manual_status and appid in manual_status:
         return manual_status[appid]
 
-    playtime = game.get('playtime_forever', 0)
-    playtime_2weeks = game.get('playtime_2weeks', 0)
-    last_played = game.get('rtime_last_played', 0)
+    playtime = game.get("playtime_forever", 0)
+    playtime_2weeks = game.get("playtime_2weeks", 0)
+    last_played = game.get("rtime_last_played", 0)
 
     if playtime_2weeks > 0:
-        return 'playing'
+        return "playing"
 
     if playtime == 0:
-        return 'backlog'
+        return "backlog"
 
     six_months_ago = time.time() - (180 * 24 * 60 * 60)
     if last_played > 0 and last_played < six_months_ago:
-        return 'dropped'
+        return "dropped"
 
-    return 'inactive'
+    return "inactive"
+
 
 def find_game_by_name(games, search_term):
     """Find game by partial name match"""
     search_lower = search_term.lower()
 
     for game in games:
-        if game['name'].lower() == search_lower:
+        if game["name"].lower() == search_lower:
             return game
 
-    matches = [g for g in games if search_lower in g['name'].lower()]
+    matches = [g for g in games if search_lower in g["name"].lower()]
 
     if len(matches) == 1:
         return matches[0]
@@ -324,11 +320,11 @@ def display_games(games, title="Library", last_updated=None):
         status = get_game_status(game, manual_status)
 
         if tags:
-            table.add_row(game["name"], f"{hours:.2f} hours",
-                          status, ", ".join(game_tags))
+            table.add_row(
+                game["name"], f"{hours:.2f} hours", status, ", ".join(game_tags)
+            )
         else:
-            table.add_row(game["name"], f"{hours:.2f} hours",
-                          status)
+            table.add_row(game["name"], f"{hours:.2f} hours", status)
 
     console.print(table)
     console.print(f"\nTotal games: {len(games)}", style="dim")
@@ -336,8 +332,7 @@ def display_games(games, title="Library", last_updated=None):
     # self explanatory i think
     if last_updated:
         dt = datetime.fromisoformat(last_updated)
-        console.print(f"Last synced: {dt.strftime('%Y-%m-%d %H:%M:%S')}",
-                      style="dim")
+        console.print(f"Last synced: {dt.strftime('%Y-%m-%d %H:%M:%S')}", style="dim")
 
 
 def display_all_tags(games):
@@ -346,12 +341,11 @@ def display_all_tags(games):
     tags = load_tags()
 
     if not tags:
-        console.print("No tags found. Use --tag to add tags to games",
-                      style="yellow")
+        console.print("No tags found. Use --tag to add tags to games", style="yellow")
         return
 
     tag_games = {}
-    games_by_id = {str(g['appid']): g['name'] for g in games}
+    games_by_id = {str(g["appid"]): g["name"] for g in games}
 
     for appid, game_tags in tags.items():
         for tag in game_tags:
@@ -363,8 +357,8 @@ def display_all_tags(games):
 
     table = Table(title="Tags")
     table.add_column("Tag", style="yellow")
-    table.add_column("Count", justify='right', style='cyan')
-    table.add_column("Games", style='green')
+    table.add_column("Count", justify="right", style="cyan")
+    table.add_column("Games", style="green")
 
     for tag in sorted(tag_games.keys()):
         game_list = tag_games[tag]
@@ -373,7 +367,7 @@ def display_all_tags(games):
             preview += f" (+{len(game_list) - 3} more)"
 
         table.add_row(tag, str(len(game_list)), preview)
- 
+
     console.print(table)
 
 
@@ -383,22 +377,26 @@ def display_stats(games):
 
     # total games, total playtime, not played games
     total_games = len(games)
-    total_minutes = sum(g['playtime_forever'] for g in games)
+    total_minutes = sum(g["playtime_forever"] for g in games)
     total_hours = total_minutes / 60
 
-    not_played = [g for g in games if g['playtime_forever'] == 0]
+    not_played = [g for g in games if g["playtime_forever"] == 0]
     not_played_count = len(not_played)
-    not_played_percent = (not_played_count / total_games *
-                          100) if total_games > 0 else 0
+    not_played_percent = (
+        (not_played_count / total_games * 100) if total_games > 0 else 0
+    )
 
-    played_games = [g for g in games if g['playtime_forever'] > 0]
-    avg_hours = (sum(g['playtime_forever'] for g in played_games) / 60 /
-                 len(played_games)) if played_games else 0
+    played_games = [g for g in games if g["playtime_forever"] > 0]
+    avg_hours = (
+        (sum(g["playtime_forever"] for g in played_games) / 60 / len(played_games))
+        if played_games
+        else 0
+    )
 
-    most_played = max(games, key=lambda g: g['playtime_forever']
-                      ) if games else None
-    least_played = min(played_games, key=lambda g: g['playtime_forever']
-                       ) if played_games else None
+    most_played = max(games, key=lambda g: g["playtime_forever"]) if games else None
+    least_played = (
+        min(played_games, key=lambda g: g["playtime_forever"]) if played_games else None
+    )
 
     brackets = [
         ("Never played", lambda h: h == 0),
@@ -423,12 +421,16 @@ def display_stats(games):
         table.add_row("Average Playtime", f"{avg_hours:.2f} hours")
 
     if most_played:
-        most_played_hours = most_played['playtime_forever'] / 60
-        table.add_row("Most Played", f"{most_played['name']} ({most_played_hours:.2f} hrs)")
+        most_played_hours = most_played["playtime_forever"] / 60
+        table.add_row(
+            "Most Played", f"{most_played['name']} ({most_played_hours:.2f} hrs)"
+        )
 
     if least_played:
-        least_played_hours = least_played['playtime_forever'] / 60
-        table.add_row("Least Played", f"{least_played['name']} ({least_played_hours:.2f} hrs)")
+        least_played_hours = least_played["playtime_forever"] / 60
+        table.add_row(
+            "Least Played", f"{least_played['name']} ({least_played_hours:.2f} hrs)"
+        )
 
     console.print(table)
 
@@ -440,8 +442,7 @@ def display_stats(games):
     bracket_data = []
 
     for label, condition in brackets:
-        count = len([g for g in games if condition(g['playtime_forever']
-                    / 60)])
+        count = len([g for g in games if condition(g["playtime_forever"] / 60)])
         percent = (count / total_games * 100) if total_games else 0
         bracket_data.append((label, count, percent))
 
@@ -451,8 +452,9 @@ def display_stats(games):
     for row in range(max_height, 0, -1):
         line = "    "
         for label, count, percent in bracket_data:
-            bar_height = int((percent / max_percent) *
-                             max_height) if max_percent > 0 else 0
+            bar_height = (
+                int((percent / max_percent) * max_height) if max_percent > 0 else 0
+            )
             if row <= bar_height:
                 line += " [yellow]██[/yellow]    "
             else:
@@ -477,39 +479,40 @@ def display_stats(games):
     console.print(label_line)
 
 
-def export_csv(games, filename='backlog.csv'):
+def export_csv(games, filename="backlog.csv"):
     """Export games to CSV file"""
     import csv
 
     tags = load_tags()
     manual_status = load_status()
 
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
+    with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(['Name', 'AppID', 'Playtime (hrs)', 'Last Played',
-                        'Status','Tags'])
+        writer.writerow(
+            ["Name", "AppID", "Playtime (hrs)", "Last Played", "Status", "Tags"]
+        )
 
         for game in games:
-            hours = game['playtime_forever'] / 60
-            appid = str(game['appid'])
-            last_played = game.get('rtime_last_played', 0)
+            hours = game["playtime_forever"] / 60
+            appid = str(game["appid"])
+            last_played = game.get("rtime_last_played", 0)
 
             if last_played > 0:
-                last_played = datetime.fromtimestamp(last_played).strftime(
-                    '%Y-%m-%d')
+                last_played = datetime.fromtimestamp(last_played).strftime("%Y-%m-%d")
             else:
-                last_played = 'Never'
+                last_played = "Never"
 
             status = get_game_status(game, manual_status)
-            game_tags = ', '.join(tags.get(appid, []))
+            game_tags = ", ".join(tags.get(appid, []))
 
-            writer.writerow([game['name'], appid, f"{hours:.2f}",
-                             status, last_played, game_tags])
+            writer.writerow(
+                [game["name"], appid, f"{hours:.2f}", status, last_played, game_tags]
+            )
 
     return filename
 
 
-def export_json(games, filename='backlog.json'):
+def export_json(games, filename="backlog.json"):
     """Export games to JSON file"""
     tags = load_tags()
     manual_status = load_status()
@@ -517,26 +520,28 @@ def export_json(games, filename='backlog.json'):
     export_data = []
 
     for game in games:
-        hours = game['playtime_forever'] / 60
-        appid = str(game['appid'])
-        last_played = game.get('rtime_last_played', 0)
+        hours = game["playtime_forever"] / 60
+        appid = str(game["appid"])
+        last_played = game.get("rtime_last_played", 0)
 
         if last_played > 0:
-            last_played = datetime.fromtimestamp(last_played).strftime('%Y-%m-%d')
+            last_played = datetime.fromtimestamp(last_played).strftime("%Y-%m-%d")
         else:
             last_played = None
 
         status = get_game_status(game, manual_status)
-        export_data.append({
-            'name': game['name'],
-            'appid': game['appid'],
-            'playtime_hours': round(hours, 2),
-            'status': status,
-            'last_played': last_played,
-            'tags': tags.get(appid, [])
-        })
+        export_data.append(
+            {
+                "name": game["name"],
+                "appid": game["appid"],
+                "playtime_hours": round(hours, 2),
+                "status": status,
+                "last_played": last_played,
+                "tags": tags.get(appid, []),
+            }
+        )
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2)
 
     return filename
@@ -546,52 +551,84 @@ def main():
 
     # initializing parser
     parser = argparse.ArgumentParser(description="Steam game backlog tracker")
-    parser.add_argument('--notplayed', action='store_true',
-                        help='Display games that have not been played')
-    parser.add_argument('--under', type=float,
-                        help="Display games that have less than X hours played")
-    parser.add_argument('--over', type=float,
-                        help="Display games hat have more than X hours played")
-    parser.add_argument('--between', nargs=2, type=float, metavar=('MIN', 'MAX'),
-                        help="Display games that have between MIN and MAX hours played")
-    parser.add_argument('--started', action='store_true',
-                        help="Display games started but barely played (0-2hrs)")
-    parser.add_argument('--recent', action='store_true',
-                        help="Display recently played games in the last two weeks")
-    parser.add_argument('--sync', action='store_true',
-                        help="Sync the game library from Steam")
-    parser.add_argument('--sortby', choices=['name', 'playtime', 'playtime-asc', 'recent'],
-                        help='Sort games by name or playtime')
-    parser.add_argument('--stats', action='store_true',
-                        help='Display library statistics')
-    parser.add_argument('--setup', action='store_true',
-                        help='Run setup wizard to configure credentials')
-    parser.add_argument('--search', type=str,
-                        help='Search for a game by name')
+    parser.add_argument(
+        "--notplayed",
+        action="store_true",
+        help="Display games that have not been played",
+    )
+    parser.add_argument(
+        "--under", type=float, help="Display games that have less than X hours played"
+    )
+    parser.add_argument(
+        "--over", type=float, help="Display games hat have more than X hours played"
+    )
+    parser.add_argument(
+        "--between",
+        nargs=2,
+        type=float,
+        metavar=("MIN", "MAX"),
+        help="Display games that have between MIN and MAX hours played",
+    )
+    parser.add_argument(
+        "--started",
+        action="store_true",
+        help="Display games started but barely played (0-2hrs)",
+    )
+    parser.add_argument(
+        "--recent",
+        action="store_true",
+        help="Display recently played games in the last two weeks",
+    )
+    parser.add_argument(
+        "--sync", action="store_true", help="Sync the game library from Steam"
+    )
+    parser.add_argument(
+        "--sortby",
+        choices=["name", "playtime", "playtime-asc", "recent"],
+        help="Sort games by name or playtime",
+    )
+    parser.add_argument(
+        "--stats", action="store_true", help="Display library statistics"
+    )
+    parser.add_argument(
+        "--setup", action="store_true", help="Run setup wizard to configure credentials"
+    )
+    parser.add_argument("--search", type=str, help="Search for a game by name")
     # tag arguments
-    parser.add_argument('--tag', nargs=2, metavar=('GAME', 'TAG'),
-                        help='Add a tag to a game')
-    parser.add_argument('--untag', nargs=2, metavar=('GAME', 'TAG'),
-                        help='Remove a tag from a game')
-    parser.add_argument('--tags', action='store_true',
-                        help='Display all tags')
-    parser.add_argument('--filter-tag', type=str, metavar='TAG',
-                        help='Filter games by tag')
+    parser.add_argument(
+        "--tag", nargs=2, metavar=("GAME", "TAG"), help="Add a tag to a game"
+    )
+    parser.add_argument(
+        "--untag", nargs=2, metavar=("GAME", "TAG"), help="Remove a tag from a game"
+    )
+    parser.add_argument("--tags", action="store_true", help="Display all tags")
+    parser.add_argument(
+        "--filter-tag", type=str, metavar="TAG", help="Filter games by tag"
+    )
 
-    parser.add_argument('--limit', type=int,
-                        help='Limit number of games to display')
-    parser.add_argument('--export', choices=['csv', 'json'],
-                        help="Export games to file (respects filters)")
-    
+    parser.add_argument("--limit", type=int, help="Limit number of games to display")
+    parser.add_argument(
+        "--export",
+        choices=["csv", "json"],
+        help="Export games to file (respects filters)",
+    )
+
     # status arguments
-    parser.add_argument('--setstatus', nargs=2, metavar=('GAME', 'STATUS'),
-                        help='Set game status (completed/hold)')
-    parser.add_argument('--clearstatus', type=str, metavar='GAME',
-                        help='Clear manual status override')
-    parser.add_argument('--filterstatus', type=str,
-                        choices=['playing', 'backlog', 'dropped',
-                                 'inactive', 'completed', 'hold'],
-                        help='Filter by status')
+    parser.add_argument(
+        "--setstatus",
+        nargs=2,
+        metavar=("GAME", "STATUS"),
+        help="Set game status (completed/hold)",
+    )
+    parser.add_argument(
+        "--clearstatus", type=str, metavar="GAME", help="Clear manual status override"
+    )
+    parser.add_argument(
+        "--filterstatus",
+        type=str,
+        choices=["playing", "backlog", "dropped", "inactive", "completed", "hold"],
+        help="Filter by status",
+    )
 
     args = parser.parse_args()
 
@@ -601,10 +638,12 @@ def main():
     if args.setup:
         if os.path.exists("config.json"):
             console = Console()
-            confirm = input("config.json already exists. Overwrite? (y/n): ").strip().lower()
+            confirm = (
+                input("config.json already exists. Overwrite? (y/n): ").strip().lower()
+            )
 
-            if confirm != 'y':
-                console.print("Setup cancelled", style='yellow')
+            if confirm != "y":
+                console.print("Setup cancelled", style="yellow")
                 return
 
         setup_config()
@@ -616,8 +655,7 @@ def main():
 
         if cache_data is None:
             console = Console()
-            console.print("No cache found. Use --sync first",
-                          style='red')
+            console.print("No cache found. Use --sync first", style="red")
             return
 
         games = cache_data["games"]
@@ -632,30 +670,30 @@ def main():
             console = Console()
 
             if result is None:
-                console.print(f"No game found matching '{game_name}'",
-                              style="red")
+                console.print(f"No game found matching '{game_name}'", style="red")
                 return
             elif isinstance(result, list):
-                console.print(f"Multiple games match '{game_name}':",
-                              style='yellow')
+                console.print(f"Multiple games match '{game_name}':", style="yellow")
 
                 for g in result[:10]:
-                    console.print(f" - {g['name']}", style='dim')
+                    console.print(f" - {g['name']}", style="dim")
                 return
 
             tags = load_tags()
-            appid = str(result['appid'])
+            appid = str(result["appid"])
 
             if appid not in tags:
                 tags[appid] = []
             if tag_name not in tags[appid]:
                 tags[appid].append(tag_name)
                 save_tags(tags)
-                console.print(f"Added tag '{tag_name}' to {result['name']}",
-                              style='green')
+                console.print(
+                    f"Added tag '{tag_name}' to {result['name']}", style="green"
+                )
             else:
-                console.print(f"{result['name']} already has tag '{tag_name}'",
-                              style="yellow")
+                console.print(
+                    f"{result['name']} already has tag '{tag_name}'", style="yellow"
+                )
             return
 
         if args.untag:
@@ -664,20 +702,18 @@ def main():
             console = Console()
 
             if result is None:
-                console.print(f"No game found matching '{game_name}'",
-                              style="red")
+                console.print(f"No game found matching '{game_name}'", style="red")
                 return
 
             elif isinstance(result, list):
-                console.print(f"Multiple games match '{game_name}':",
-                              style="yellow")
+                console.print(f"Multiple games match '{game_name}':", style="yellow")
 
                 for g in result[:10]:
                     console.print(f" - {g['name']}", style="dim")
                 return
 
             tags = load_tags()
-            appid = str(result['appid'])
+            appid = str(result["appid"])
 
             if appid in tags and tag_name in tags[appid]:
                 tags[appid].remove(tag_name)
@@ -686,11 +722,13 @@ def main():
                     del tags[appid]
 
                 save_tags(tags)
-                console.print(f"Removed tag '{tag_name}' from {result['name']}",
-                              style="green")
+                console.print(
+                    f"Removed tag '{tag_name}' from {result['name']}", style="green"
+                )
             else:
-                console.print(f"{result['name']} doesn't have tag '{tag_name}'",
-                              style="yellow")
+                console.print(
+                    f"{result['name']} doesn't have tag '{tag_name}'", style="yellow"
+                )
 
             return
 
@@ -700,44 +738,46 @@ def main():
 
         if cache_data is None:
             console = Console()
-            console.print('No cache found. Use --sync first', style='red')
+            console.print("No cache found. Use --sync first", style="red")
             return
 
-        games = cache_data['games']
+        games = cache_data["games"]
         if args.setstatus:
 
             game_name, new_status = args.setstatus
 
-            if new_status not in ['completed', 'hold']:
+            if new_status not in ["completed", "hold"]:
                 console = Console()
-                console.print(f"Manual status must be 'completed' or 'hold'",
-                              style='red')
-                console.print(f"Other statuses (playing, backlog, dropped) are auto-detected",
-                              style='dim')
+                console.print(
+                    f"Manual status must be 'completed' or 'hold'", style="red"
+                )
+                console.print(
+                    f"Other statuses (playing, backlog, dropped) are auto-detected",
+                    style="dim",
+                )
                 return
 
             result = find_game_by_name(games, game_name)
             console = Console()
 
             if result is None:
-                console.print(f"No game found matching '{game_name}'",
-                              style='red')
+                console.print(f"No game found matching '{game_name}'", style="red")
                 return
             elif isinstance(result, list):
-                console.print(f"Multiple games match '{game_name}':",
-                              style='yellow')
+                console.print(f"Multiple games match '{game_name}':", style="yellow")
 
                 for g in result[:10]:
-                    console.print(f"  - {g['name']}", style='dim')
+                    console.print(f"  - {g['name']}", style="dim")
 
                 return
- 
+
             status = load_status()
-            appid = str(result['appid'])
+            appid = str(result["appid"])
             status[appid] = new_status
             save_status(status)
-            console.print(f"Set {result['name']} status to '{new_status}'",
-                          style='green')
+            console.print(
+                f"Set {result['name']} status to '{new_status}'", style="green"
+            )
             return
 
         if args.clearstatus:
@@ -745,28 +785,33 @@ def main():
             console = Console()
 
             if result is None:
-                console.print(f"No game found matching '{args.clearstatus}'",
-                              style='red')
+                console.print(
+                    f"No game found matching '{args.clearstatus}'", style="red"
+                )
                 return
             elif isinstance(result, list):
-                console.print(f"Multiple games match '{args.clearstatus}':",
-                              style='yellow')
+                console.print(
+                    f"Multiple games match '{args.clearstatus}':", style="yellow"
+                )
 
                 for g in result[:10]:
-                    console.print(f"  - {g['name']}", style='dim')
+                    console.print(f"  - {g['name']}", style="dim")
                 return
 
             status = load_status()
-            appid = str(result['appid'])
-            
+            appid = str(result["appid"])
+
             if appid in status:
                 del status[appid]
                 save_status(status)
-                console.print(f"Cleared status for {result['name']} (will auto-detect)",
-                              style='green')
+                console.print(
+                    f"Cleared status for {result['name']} (will auto-detect)",
+                    style="green",
+                )
             else:
-                console.print(f"{result['name']} has no manual status override",
-                              style='yellow')
+                console.print(
+                    f"{result['name']} has no manual status override", style="yellow"
+                )
             return
 
     # syncing, checks if user has cache already or not
@@ -785,8 +830,10 @@ def main():
 
         if cache_data is None:
             console = Console()
-            console.print("No cache found. Use --sync to sync the game library from Steam.",
-                          style="red")
+            console.print(
+                "No cache found. Use --sync to sync the game library from Steam.",
+                style="red",
+            )
             return
 
         games = cache_data["games"]
@@ -800,42 +847,42 @@ def main():
     # filtering
     if args.search:
         search_term = args.search.lower()
-        games = [g for g in games if search_term in g['name'].lower()]
+        games = [g for g in games if search_term in g["name"].lower()]
 
     if args.filter_tag:
         tags = load_tags()
-        games = [g for g in games if args.filter_tag in tags.get(str(g['appid']), [])]
+        games = [g for g in games if args.filter_tag in tags.get(str(g["appid"]), [])]
 
     if args.filterstatus:
         manual_status = load_status()
-        games = [g for g in games if get_game_status(g, manual_status) == args.filterstatus]
+        games = [
+            g for g in games if get_game_status(g, manual_status) == args.filterstatus
+        ]
 
     if args.notplayed:
-        games = [g for g in games if g['playtime_forever'] == 0]
+        games = [g for g in games if g["playtime_forever"] == 0]
     elif args.started:
-        games = [g for g in games if g['playtime_forever'] / 60 <= 2]
+        games = [g for g in games if g["playtime_forever"] / 60 <= 2]
     elif args.recent:
-        games = [g for g in games if g.get('playtime_2weeks', 0) > 0]
+        games = [g for g in games if g.get("playtime_2weeks", 0) > 0]
     elif args.under:
-        games = [g for g in games if g['playtime_forever'] / 60 < args.under]
+        games = [g for g in games if g["playtime_forever"] / 60 < args.under]
     elif args.over:
-        games = [g for g in games if g['playtime_forever'] / 60 > args.over]
+        games = [g for g in games if g["playtime_forever"] / 60 > args.over]
     elif args.between:
         min_hrs, max_hrs = args.between
-        games = [g for g in games if min_hrs <= g['playtime_forever'] / 60 <= max_hrs]
+        games = [g for g in games if min_hrs <= g["playtime_forever"] / 60 <= max_hrs]
 
     # sorting
 
-    if args.sortby == 'name':
-        games = sorted(games, key=lambda g: g['name'].lower())
-    elif args.sortby == 'playtime':
-        games = sorted(games, key=lambda g: g['playtime_forever'],
-                       reverse=True)
-    elif args.sortby == 'playtime-asc':
-        games = sorted(games, key=lambda g: g['playtime_forever'])
-    elif args.sortby == 'recent':
-        games = sorted(games, key=lambda g: g.get('rtime_last_played', 0),
-                       reverse=True)
+    if args.sortby == "name":
+        games = sorted(games, key=lambda g: g["name"].lower())
+    elif args.sortby == "playtime":
+        games = sorted(games, key=lambda g: g["playtime_forever"], reverse=True)
+    elif args.sortby == "playtime-asc":
+        games = sorted(games, key=lambda g: g["playtime_forever"])
+    elif args.sortby == "recent":
+        games = sorted(games, key=lambda g: g.get("rtime_last_played", 0), reverse=True)
 
     # title labeling
 
@@ -862,19 +909,17 @@ def main():
 
     # limits # of games displayed
     if args.limit:
-        games = games[:args.limit]
-    
+        games = games[: args.limit]
+
     if args.export:
         console = Console()
 
-        if args.export == 'csv':
+        if args.export == "csv":
             filename = export_csv(games)
-            console.print(f"Exported {len(games)} games to {filename}",
-                          style="green")
-        elif args.export == 'json':
+            console.print(f"Exported {len(games)} games to {filename}", style="green")
+        elif args.export == "json":
             filename = export_json(games)
-            console.print(f"Exported {len(games)} games to {filename}",
-                          style="green")
+            console.print(f"Exported {len(games)} games to {filename}", style="green")
         return
 
     display_games(games, title, last_updated=last_updated)
