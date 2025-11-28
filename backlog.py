@@ -10,6 +10,7 @@ from rich.table import Table
 CACHE_DIR = "cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "games.json")
 TAGS_FILE = os.path.join(CACHE_DIR, "tags.json")
+STATUS_FILE = os.path.join(CACHE_DIR, "status.json")
 
 
 def ensure_cache():
@@ -62,7 +63,7 @@ def setup_config():
         sys.exit(1)
 
     console.print("\n[bold]Step 2: Steam ID[/bold]")
-    console.print("Find your 64-bit Steam ID at: https://steamid.io",
+    console.print("Find your 64-bit tem ID at: https://steamid.io",
                   style='dim')
     steam_id = input("Enter your Steam ID: ").strip()
 
@@ -286,6 +287,61 @@ def save_tags(tags):
         console = Console()
         console.print(f"Error saving tags: {e}", style="red")
 
+def load_status():
+    """Load manual status overrides from file"""
+    if not os.path.exists(STATUS_FILE):
+        return {}
+    try:
+        with open(STATUS_FILE) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_status():
+    """Save manual status overrides to file"""
+    ensure_cache()
+
+    try:
+
+        with open(STATUS_FILE, 'w') as f:
+
+            json.dump(status, f, indent=2)
+
+    except OSError as e:
+
+        console = Console()
+        console.print(f"Error saving status: {e}", style="red")
+
+
+def get_game_status(game, manual_status=None):
+    """Calculate game status if its manually overriden or auto detected"""
+    import time
+
+    appid = str(game["appid"])
+    
+    if manual_status and appid in manual_status:
+
+        return manual_status[appid]
+
+    playtime = game.get('playtime_forever', 0)
+    playtime_2weeks = game.get('playtime_2weeks', 0)
+    last_played = game.get('rtime_last_played', 0)
+
+    if playtime_2weeks > 0:
+
+        return 'playing'
+
+    if playtime == 0:
+
+        return 'backlog'
+
+    six_months_ago = time.time() - (180 * 24 * 60 * 60)
+    if last_played > 0 and last_played < six_months_ago:
+
+        return 'dropped'
+
+    return 'inactive'
 
 def find_game_by_name(games, search_term):
     """Find game by partial name match"""
@@ -314,10 +370,12 @@ def display_games(games, title="Library", last_updated=None):
     """Display the user's game library"""
     console = Console()
     tags = load_tags()
+    manual_status = load_status()
 
     table = Table(title=title)
     table.add_column("Game", justify="left", style="green", no_wrap=False)
     table.add_column("Playtime", justify="right", style="cyan")
+    table.add_column("Status", justify="left", style="magenta")
 
     if tags:
 
@@ -329,13 +387,15 @@ def display_games(games, title="Library", last_updated=None):
         hours = game["playtime_forever"] / 60
         appid = str(game["appid"])
         game_tags = tags.get(appid, [])
+        status = get_game_status(game, manual_status)
 
         if tags:
 
-            table.add_row(game["name"], f"{hours:.2f} hours", ", "
-                          .join(game_tags))
+            table.add_row(game["name"], f"{hours:.2f} hours",
+                          status, ", ".join(game_tags))
         else:
-            table.add_row(game["name"], f"{hours:.2f} hours")
+            table.add_row(game["name"], f"{hours:.2f} hours",
+                          status)
 
     console.print(table)
     console.print(f"\nTotal games: {len(games)}", style="dim")
@@ -510,11 +570,12 @@ def export_csv(games, filename='backlog.csv'):
     import csv
 
     tags = load_tags()
+    manual_status = load_status()
 
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['Name', 'AppID', 'Playtime (hrs)', 'Last Played',
-                         'Tags'])
+                       'Status','Tags'])
 
         for game in games:
 
@@ -530,10 +591,12 @@ def export_csv(games, filename='backlog.csv'):
             else:
 
                 last_played = 'Never'
+
+            status = get_game_status(game, manual_status)
             game_tags = ', '.join(tags.get(appid, []))
 
             writer.writerow([game['name'], appid, f"{hours:.2f}",
-                             last_played, game_tags])
+                             status, last_played, game_tags])
 
     return filename
 
@@ -541,12 +604,13 @@ def export_csv(games, filename='backlog.csv'):
 def export_json(games, filename='backlog.json'):
     """Export games to JSON file"""
     tags = load_tags()
+    manual_status = load_status()
 
     export_data = []
 
     for game in games:
 
-        hours = game['playtime_Forever'] / 60
+        hours = game['playtime_forever'] / 60
         appid = str(game['appid'])
         last_played = game.get('rtime_last_played', 0)
 
@@ -558,10 +622,12 @@ def export_json(games, filename='backlog.json'):
 
             last_played = None
 
+        status = get_game_status(game, manual_status)
         export_data.append({
             'name': game['name'],
             'appid': game['appid'],
             'playtime_hours': round(hours, 2),
+            'status': status,
             'last_played': last_played,
             'tags': tags.get(appid, [])
         })
@@ -599,6 +665,7 @@ def main():
                         help='Run setup wizard to configure credentials')
     parser.add_argument('--search', type=str,
                         help='Search for a game by name')
+    # tag arguments
     parser.add_argument('--tag', nargs=2, metavar=('GAME', 'TAG'),
                         help='Add a tag to a game')
     parser.add_argument('--untag', nargs=2, metavar=('GAME', 'TAG'),
@@ -607,10 +674,21 @@ def main():
                         help='Display all tags')
     parser.add_argument('--filter-tag', type=str, metavar='TAG',
                         help='Filter games by tag')
+
     parser.add_argument('--limit', type=int,
                         help='Limit number of games to display')
     parser.add_argument('--export', choices=['csv', 'json'],
                         help="Export games to file (respects filters)")
+    
+    # status arguments
+    parser.add_argument('--setstatus', nargs=2, metavar=('GAME', 'STATUS'),
+                        help='Set game status (completed/hold)')
+    parser.add_argument('--clearstatus', type=str, metavar='GAME',
+                        help='Clear manual status override')
+    parser.add_argument('--filterstatus', type=str,
+                        choices=['playing', 'backlog', 'dropped',
+                                 'inactive', 'completed', 'hold'],
+                        help='Filter by status')
 
     args = parser.parse_args()
 
@@ -736,6 +814,95 @@ def main():
 
             return
 
+    # status management
+    if args.setstatus or args.clearstatus:
+
+        cache_data = load_cache()
+
+        if cache_data is None:
+
+            console = Console()
+            console.print('No cache found. Use --sync first', style='red')
+            return
+
+        games = cache_data['games']
+
+        if args.setstatus:
+
+            game_name, new_status = args.setstatus
+
+            if new_status not in ['completed', 'hold']:
+
+                console = Console()
+                console.print(f"Manual status must be 'completed' or 'hold'",
+                              style='red')
+                console.print(f"Other statuses (playing, backlog, dropped) are auto-detected",
+                              style='dim')
+                return
+
+            result = find_game_by_name(games, game_name)
+            console = Console()
+
+            if result is None:
+
+                console.print(f"No game found matching '{game_name}'",
+                              style='red')
+                return
+            elif isinstance(result, list):
+
+                console.print(f"Multiple games match '{game_name}':",
+                              style='yellow')
+
+                for g in result[:10]:
+
+                    console.print(f"  - {g['name']}", style='dim')
+
+                return
+            
+            status = load_status()
+            appid = str(result['appid'])
+            status[appid] = new_status
+            save_status(status)
+            console.print(f"Set {result['name']} status to '{new_status}'",
+                          style='green')
+            return
+
+        if args.clearstatus:
+
+            result = find_game_by_name(games, args.clearstatus)
+            console = Console()
+
+            if result is None:
+
+                console.print(f"No game found matching '{args.clearstatus}'",
+                              style='red')
+                return
+            elif isinstance(result, list):
+
+                console.print(f"Multiple games match '{args.clearstatus}':",
+                              style='yellow')
+
+                for g in result[:10]:
+
+                    console.print(f"  - {g['name']}", style='dim')
+                return
+
+            status = load_status()
+            appid = str(result['appid'])
+            
+            if appid in status:
+
+                del status[appid]
+                save_status(status)
+                console.print(f"Cleared status for {result['name']} (will auto-detect)",
+                              style='green')
+
+            else:
+
+                console.print(f"{result['name']} has no manual status override",
+                              style='yellow')
+            return
+
     # syncing, checks if user has cache already or not
     if args.sync:
 
@@ -777,6 +944,11 @@ def main():
 
         tags = load_tags()
         games = [g for g in games if args.filter_tag in tags.get(str(g['appid']), [])]
+
+    if args.filterstatus:
+
+        manual_status = load_status()
+        games = [g for g in games if get_game_status(g, manual_status) == args.filterstatus]
 
     if args.notplayed:
 
@@ -829,15 +1001,24 @@ def main():
 
         title = f"Search results for {args.search}"
 
-    if args.notplayed:
+    elif args.filter_tag:
+
+        title = f"Tag: {args.filter_tag}"
+
+    elif args.filterstatus:
+
+        title = f"Status: {args.filterstatus}"
+
+    elif args.notplayed:
 
         title = "Not played games"
+
     elif args.started:
 
         title = "Started but barely played games (0-2hrs)"
 
     elif args.recent:
- 
+
         title = f"Recently played (last 2 weeks)"
 
     elif args.under:
