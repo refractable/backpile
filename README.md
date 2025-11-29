@@ -27,8 +27,8 @@ A command-line tool to track and manage your Steam game library. Pull data direc
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/steam-backlog-tracker.git
-cd steam-backlog-tracker
+git clone https://github.com/refractable/steam-backlog.git
+cd steam-backlog
 pip install requests rich
 ```
 
@@ -160,7 +160,7 @@ python main.py --filterstatus completed --export csv
 ## 📁 Project Structure
 
 ```
-steam-backlog-tracker/
+steam-backlog/
 ├── main.py              # Entry point
 ├── backlog/
 │   ├── __init__.py      # Constants

@@ -7,8 +7,8 @@ Thanks for your interest in contributing! This document outlines how to get star
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/steam-backlog-tracker.git
-   cd steam-backlog-tracker
+   git clone https://github.com/refractable/steam-backlog.git
+   cd steam-backlog
    ```
 3. Install dependencies:
    ```bash
