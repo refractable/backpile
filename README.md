@@ -28,7 +28,7 @@ A simple command-line tool for tracking your Steam game library.
 
 ```bash
 git clone https://github.com/refractable/backpile.git
-cd steam-backlog
+cd backpile
 pip install requests rich
 ```
 
