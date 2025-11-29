@@ -1,18 +1,30 @@
-# Steam Backlog Tracker
+# 🎮 Steam Backlog Tracker
 
-A command-line tool to track and manage your Steam game library. Pulls data directly from Steam's API and provides filtering, tagging, status tracking, and statistics.
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## Features
+A command-line tool to track and manage your Steam game library. Pull data directly from Steam's API and get insights into your backlog with filtering, tagging, status tracking, and statistics.
 
-- **Sync your Steam library** - Fetch games directly from Steam API
-- **Filter games** - By playtime, status, tags, recently played, and more
-- **Tag system** - Organize games with custom tags
-- **Status tracking** - Auto-detects playing/backlog/dropped/inactive, with manual overrides for completed/hold
-- **Manual game entries** - Track non-Steam games alongside your Steam library
-- **Statistics** - View playtime distribution and library insights
-- **Export** - Save filtered results to CSV or JSON
+---
 
-## Installation
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔄 **Sync Library** | Fetch games directly from Steam API |
+| 🔍 **Smart Filtering** | Filter by playtime, status, tags, recent activity |
+| 🏷️ **Tag System** | Organize games with custom tags |
+| 📊 **Status Tracking** | Auto-detects playing/backlog/dropped with manual overrides |
+| 🎯 **Manual Entries** | Track non-Steam games alongside your library |
+| 📈 **Statistics** | Playtime distribution charts and library insights |
+| 📁 **Export** | Save to CSV or JSON |
+
+---
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
 git clone https://github.com/yourusername/steam-backlog-tracker.git
@@ -20,61 +32,44 @@ cd steam-backlog-tracker
 pip install requests rich
 ```
 
-## Setup
-
-Run the tool and follow the interactive setup:
+### Setup
 
 ```bash
 python main.py
 ```
 
 You'll need:
-1. **Steam API Key** - Get one at https://steamcommunity.com/dev/apikey
-2. **Steam ID** - Find your 64-bit Steam ID at https://steamid.io
+- 🔑 **Steam API Key** → [Get one here](https://steamcommunity.com/dev/apikey)
+- 🆔 **Steam ID** → [Find yours here](https://steamid.io)
 
-## Usage
-
-### Basic Commands
+### First Run
 
 ```bash
-# Sync library from Steam
-python main.py --sync
-
-# View all games
-python main.py
-
-# View library statistics
-python main.py --stats
+python main.py --sync    # Fetch your library
+python main.py           # View all games
+python main.py --stats   # See statistics
 ```
 
-### Filtering
+---
+
+## 📖 Usage
+
+### Filtering Games
 
 ```bash
-# Games never played
-python main.py --notplayed
+# By playtime
+python main.py --notplayed           # Never played
+python main.py --under 5             # Under 5 hours
+python main.py --over 100            # Over 100 hours
+python main.py --between 10 50       # 10-50 hours
+python main.py --started             # Barely started (0-2 hrs)
 
-# Games under 5 hours
-python main.py --under 5
+# By activity
+python main.py --recent              # Played last 2 weeks
+python main.py --filterstatus backlog
 
-# Games over 100 hours
-python main.py --over 100
-
-# Games between 10-50 hours
-python main.py --between 10 50
-
-# Barely started games (0-2 hours)
-python main.py --started
-
-# Recently played (last 2 weeks)
-python main.py --recent
-
-# Search by name
+# By name or tag
 python main.py --search "dark souls"
-
-# Filter by status
-python main.py --filterstatus completed
-
-# Filter by tag
 python main.py --filter-tag rpg
 ```
 
@@ -87,133 +82,108 @@ python main.py --sortby playtime-asc  # Least played first
 python main.py --sortby recent        # Recently played first
 ```
 
-### Tags
+### 🏷️ Tags
 
 ```bash
-# Add a tag
-python main.py --tag "Dark Souls" rpg
+python main.py --tag "Dark Souls" rpg              # Add tag
+python main.py --untag "Dark Souls" rpg            # Remove tag
+python main.py --tags                              # View all tags
 
-# Remove a tag
-python main.py --untag "Dark Souls" rpg
-
-# View all tags
-python main.py --tags
-
-# Bulk tag multiple games
+# Bulk operations
 python main.py --bulktag coop "Portal 2" "Left 4 Dead" Terraria
-
-# Bulk untag
 python main.py --bulkuntag coop "Portal 2" "Left 4 Dead"
 ```
 
-### Status Tracking
+### 📊 Status Tracking
 
-Games are automatically categorized based on activity:
-- **playing** - Played in the last 2 weeks
-- **backlog** - Never played
-- **inactive** - Played but not recently
-- **dropped** - Not played in 6+ months
+**Auto-detected:**
+| Status | Condition |
+|--------|-----------|
+| `playing` | Played in last 2 weeks |
+| `backlog` | Never played |
+| `inactive` | Played but not recently |
+| `dropped` | No activity in 6+ months |
 
-Manual overrides for:
-- **completed** - Finished games
-- **hold** - Paused games
-
+**Manual overrides:**
 ```bash
-# Set status
 python main.py --setstatus "Dark Souls" completed
-
-# Bulk set status
 python main.py --bulkstatus completed "Dark Souls" "Elden Ring" "Sekiro"
-
-# Clear manual status (reverts to auto-detect)
-python main.py --clearstatus "Dark Souls"
+python main.py --clearstatus "Dark Souls"    # Revert to auto-detect
 ```
 
-### Manual Games
+### 🎯 Manual Games
 
 Track non-Steam games or games from other platforms:
 
 ```bash
-# Add by name
+# Add games
 python main.py --addgame "God of War" --platform "PS5"
+python main.py --addgame 105600 --platform "PC"    # Steam App ID lookup
 
-# Add by Steam App ID (auto-fetches name)
-python main.py --addgame 105600 --platform "PC"
-
-# Log playtime
-python main.py --logtime "God of War" 5
-
-# Remove a manual game
+# Manage
+python main.py --logtime "God of War" 5            # Log 5 hours
 python main.py --removegame "God of War"
 
-# Filter by source
-python main.py --source steam    # Steam games only
-python main.py --source manual   # Manual games only
+# Filter
+python main.py --source steam     # Steam only
+python main.py --source manual    # Manual only
 ```
 
-### Export
+### 📁 Export
 
 ```bash
-# Export to CSV (respects filters)
-python main.py --export csv
-
-# Export games over 50 hours to JSON
-python main.py --over 50 --export json
+python main.py --export csv                        # Export all
+python main.py --over 50 --export json             # Export filtered
+python main.py --filterstatus completed --export csv
 ```
 
-### Other Options
+---
 
-```bash
-# Limit results
-python main.py --notplayed --limit 10
-
-# Reconfigure credentials
-python main.py --setup
-```
-
-## Examples
+## 💡 Examples
 
 ```bash
 # Find RPGs I haven't finished
 python main.py --filter-tag rpg --filterstatus inactive
 
-# Export my completed games
-python main.py --filterstatus completed --export csv
+# Short games to clear from backlog
+python main.py --notplayed --sortby playtime-asc --limit 20
 
-# See what I've been playing lately
+# What I've been playing lately
 python main.py --recent --sortby playtime
 
-# Find short games to clear from backlog
-python main.py --notplayed --sortby playtime-asc --limit 20
+# Export completed games
+python main.py --filterstatus completed --export csv
 ```
 
-## File Structure
+---
+
+## 📁 Project Structure
 
 ```
-main.py                 # Entry point
-pyrightconfig.json      # Type checker config
-backlog/
-  __init__.py           # Package constants
-  api.py                # Steam API functions
-  cache.py              # Local data storage
-  cli.py                # Command-line interface
-  display.py            # Output formatting
-  export.py             # CSV/JSON export
-  utils.py              # Helper functions
+steam-backlog-tracker/
+├── main.py              # Entry point
+├── backlog/
+│   ├── __init__.py      # Constants
+│   ├── api.py           # Steam API
+│   ├── cache.py         # Data storage
+│   ├── cli.py           # CLI interface
+│   ├── display.py       # Output formatting
+│   ├── export.py        # CSV/JSON export
+│   └── utils.py         # Helpers
+├── cache/               # Local data (auto-generated)
+│   ├── games.json
+│   ├── tags.json
+│   ├── status.json
+│   └── manual_games.json
+└── ...
 ```
 
-Data is stored in `cache/`:
-- `games.json` - Cached Steam library
-- `tags.json` - Custom tags
-- `status.json` - Manual status overrides
-- `manual_games.json` - Non-Steam games
+---
 
-## Requirements
+## 🤝 Contributing
 
-- Python 3.8+
-- requests
-- rich
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## License
+## 📄 License
 
-MIT
+[MIT](LICENSE) © 2025
