@@ -1,0 +1,11 @@
+{
+  "include": [
+    "backlog",
+    "backlog.py"
+  ],
+  "extraPath": [
+    "."
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic"
+}
