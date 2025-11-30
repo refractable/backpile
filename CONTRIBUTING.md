@@ -1,102 +1,88 @@
-# Contributing to Backpile
+<h1 align="center">Contributing to Backpile</h1>
 
-Thanks for your interest in contributing! This document outlines how to get started.
+<p align="center">
+  Thanks for your interest in contributing!
+</p>
+
+<p align="center">
+  <a href="#getting-started">Getting Started</a> •
+  <a href="#development">Development</a> •
+  <a href="#submitting-changes">Submitting Changes</a> •
+  <a href="#ideas">Ideas</a>
+</p>
+
+---
 
 ## Getting Started
 
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/refractable/backpile.git
+   git clone https://github.com/yourusername/backpile.git
    cd backpile
    ```
 3. Install dependencies:
    ```bash
    pip install requests rich
    ```
-4. Set up your config by running `python main.py` and following the setup wizard
+4. Run `python main.py` and follow the setup wizard
 
 ## Development
 
 ### Project Structure
 
 ```
-main.py                 # Entry point
-backlog/
-  __init__.py           # Package constants
-  api.py                # Steam API functions
-  cache.py              # Local data storage
-  cli.py                # Command-line interface
-  display.py            # Output formatting
-  export.py             # CSV/JSON export
-  utils.py              # Helper functions
-```
-
-### Running the Tool
-
-```bash
-python main.py --help
-python main.py --sync
-python main.py --stats
+backpile/
+├── main.py              # Entry point
+├── backlog/
+│   ├── __init__.py      # Constants
+│   ├── api.py           # Steam API
+│   ├── cache.py         # Data storage
+│   ├── cli.py           # CLI interface
+│   ├── display.py       # Output formatting
+│   ├── export.py        # CSV/JSON export
+│   └── utils.py         # Helpers
+└── ...
 ```
 
 ### Code Style
 
-- Use [Black](https://github.com/psf/black) for formatting (88 char line length)
-- Use meaningful variable and function names
+- Use [Black](https://github.com/psf/black) for formatting
 - Add docstrings to new functions
 - Keep functions focused and reasonably sized
 
-## How to Contribute
+## Submitting Changes
 
-### Reporting Bugs
-
-- Check existing issues first to avoid duplicates
-- Use the Bug Report template
-- Include steps to reproduce, expected vs actual behavior, and error messages
-
-### Suggesting Features
-
-- Use the Feature Request template
-- Explain the use case and why it would be useful
-- Be open to discussion on implementation
-
-### Submitting Changes
-
-1. Create a branch for your changes:
+1. Create a branch:
    ```bash
    git checkout -b feature/your-feature-name
    ```
 2. Make your changes
-3. Test your changes thoroughly
+3. Test thoroughly
 4. Commit with clear messages:
    ```bash
-   git commit -m "Add feature: description of what it does"
+   git commit -m "Add feature: description"
    ```
-5. Push to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-6. Open a Pull Request with a clear description of your changes
+5. Push and open a Pull Request
 
 ### Pull Request Guidelines
 
 - Keep PRs focused on a single feature or fix
-- Update the README if adding new commands or features
+- Update README if adding new commands
 - Test with your own Steam library before submitting
-- Be responsive to feedback and questions
 
-## Ideas for Contributions
+## Ideas
 
-Here are some areas where contributions would be welcome:
+Areas where contributions are welcome:
 
-- **New filters** - additional ways to filter the library
-- **Sorting options** - new sort criteria
-- **Display improvements** - better formatting or new views
-- **Documentation** - improve README, add examples
-- **Bug fixes** - check the issues tab
-- **Tests** - add unit tests
+- New filters or sorting options
+- Display improvements
+- Documentation and examples
+- Bug fixes (check Issues tab)
+- Tests
 
-## Questions?
+---
 
-Open an issue with the Question template if you're unsure about anything.
+<p align="center">
+  Questions? Open an issue with the <b>Question</b> template.
+</p>
